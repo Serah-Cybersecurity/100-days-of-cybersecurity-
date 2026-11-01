@@ -1,0 +1,28 @@
+title: Windows Failed Logon Event
+status: test
+
+description: >
+  Identifies a Windows Security event recording
+  an unsuccessful account logon.
+
+logsource:
+  product: windows
+  service: security
+
+detection:
+  selection:
+    EventID: 4625
+
+  condition: selection
+
+fields:
+- TargetUserName
+- IpAddress
+- LogonType
+
+falsepositives:
+- User entering an incorrect password
+- Application using an outdated password
+- Approved automated authentication failures
+
+level: low
