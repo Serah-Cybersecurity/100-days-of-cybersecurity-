@@ -1,0 +1,81 @@
+[
+  {
+    "timestamp": "2026-10-13T09:00:00Z",
+    "source": "192.0.2.10",
+    "destination": "198.51.100.20",
+    "destination_port": 443,
+    "protocol": "TCP",
+    "event": "connection_established"
+  },
+  {
+    "timestamp": "2026-10-13T09:00:01Z",
+    "source": "192.0.2.11",
+    "destination": "198.51.100.1",
+    "destination_port": 53,
+    "protocol": "UDP",
+    "event": "dns_lookup"
+  },
+  {
+    "timestamp": "2026-10-13T09:00:02Z",
+    "source": "192.0.2.12",
+    "destination": "198.51.100.25",
+    "destination_port": 80,
+    "protocol": "TCP",
+    "event": "http_request"
+  },
+  {
+    "timestamp": "2026-10-13T09:00:03Z",
+    "source": "192.0.2.10",
+    "destination": "198.51.100.20",
+    "destination_port": 443,
+    "protocol": "TCP",
+    "event": "connection_established"
+  },
+  {
+    "timestamp": "2026-10-13T09:00:04Z",
+    "source": "192.0.2.15",
+    "destination": "198.51.100.1",
+    "destination_port": 53,
+    "protocol": "UDP",
+    "event": "dns_lookup"
+  },
+  {
+    "timestamp": "2026-10-13T09:00:05Z",
+    "source": "192.0.2.18",
+    "destination": "198.51.100.50",
+    "destination_port": 22,
+    "protocol": "TCP",
+    "event": "ssh_login_attempt"
+  },
+  {
+    "timestamp": "2026-10-13T09:00:06Z",
+    "source": "192.0.2.20",
+    "destination": "198.51.100.20",
+    "destination_port": 443,
+    "protocol": "TCP",
+    "event": "connection_established"
+  },
+  {
+    "timestamp": "2026-10-13T09:00:07Z",
+    "source": "192.0.2.21",
+    "destination": "198.51.100.50",
+    "destination_port": "INVALID_PORT",
+    "protocol": "TCP",
+    "event": "malformed_test_1"
+  },
+  {
+    "timestamp": "2026-10-13T09:00:08Z",
+    "source": "192.0.2.22",
+    "destination": "198.51.100.99",
+    "protocol": "ICMP",
+    "event": "missing_port_field"
+  },
+  {
+    "timestamp": "2026-10-13T09:00:09Z",
+    "source": "192.0.2.23",
+    "destination": "198.51.100.100",
+    "destination_port": 99999,
+    "protocol": "UNKNOWN_PROTO",
+    "event": "out_of_range_port_and_proto"
+  }
+]

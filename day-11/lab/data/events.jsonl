@@ -1,0 +1,8 @@
+{"timestamp":"2026-10-29T09:12:03+03:00","host":"labhost","source":"sshd","event_type":"authentication","username":"admin","source_ip":"198.51.100.27","result":"failed","details":"invalid_user"}
+{"timestamp":"2026-10-29T09:12:08+03:00","host":"labhost","source":"sshd","event_type":"authentication","username":"oracle","source_ip":"198.51.100.27","result":"failed","details":"invalid_user"}
+{"timestamp":"2026-10-29T09:12:15+03:00","host":"labhost","source":"sshd","event_type":"authentication","username":"student","source_ip":"198.51.100.27","result":"failed","details":"incorrect_password"}
+{"timestamp":"2026-10-29T09:13:22+03:00","host":"labhost","source":"sshd","event_type":"authentication","username":"student","source_ip":"198.51.100.27","result":"success","method":"password"}
+{"timestamp":"2026-10-29T09:13:58+03:00","host":"labhost","source":"sudo","event_type":"privilege_use","username":"student","source_ip":"198.51.100.27","result":"success","command":"systemctl status cron"}
+{"timestamp":"2026-10-29T09:15:00+03:00","host":"labhost","source":"systemd","event_type":"scheduled_task","username":"root","task_name":"daily-report.timer","result":"fired"}
+{"timestamp":"2026-10-29T09:15:04+03:00","host":"labhost","source":"systemd","event_type":"service","service_name":"daily-report.service","result":"started"}
+{"timestamp":"2026-10-29T09:17:20+03:00","host":"labhost","source":"sshd","event_type":"authentication","username":"student","source_ip":"192.0.2.44","result":"success","method":"publickey"}

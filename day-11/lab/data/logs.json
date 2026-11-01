@@ -1,0 +1,47 @@
+[
+  {
+    "timestamp": "2026-10-29T08:12:01+03:00",
+    "host": "labhost",
+    "source": "sshd",
+    "event_type": "authentication",
+    "username": "root",
+    "source_ip": "192.168.1.50",
+    "result": "failed"
+  },
+  {
+    "timestamp": "2026-10-29T08:12:03+03:00",
+    "host": "labhost",
+    "source": "sshd",
+    "event_type": "authentication",
+    "username": "root",
+    "source_ip": "192.168.1.50",
+    "result": "failed"
+  },
+  {
+    "timestamp": "2026-10-29T08:15:22+03:00",
+    "host": "labhost",
+    "source": "sshd",
+    "event_type": "authentication",
+    "username": "admin",
+    "source_ip": "10.0.0.15",
+    "result": "success"
+  },
+  {
+    "timestamp": "2026-10-29T08:16:05+03:00",
+    "host": "labhost",
+    "source": "sudo",
+    "event_type": "privilege_escalation",
+    "username": "admin",
+    "command": "/usr/bin/apt-get update",
+    "result": "allowed"
+  },
+  {
+    "timestamp": "2026-10-29T08:20:00+03:00",
+    "host": "labhost",
+    "source": "cron",
+    "event_type": "scheduled_task",
+    "username": "root",
+    "command": "/usr/local/bin/triage_sync.sh",
+    "result": "executed"
+  }
+]

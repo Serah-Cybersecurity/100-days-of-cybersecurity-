@@ -1,0 +1,7 @@
+[
+  {
+    "timestamp": "2026-10-24T09:00:00Z",
+    "username": "test_user",
+    "event": "login_failed"
+  }
+]
