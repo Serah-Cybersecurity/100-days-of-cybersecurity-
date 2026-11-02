@@ -1,48 +1,39 @@
-# Day 14 - SOC Alert Triage, Investigation & Incident Handling
+# Day 14 - SOC Alert Triage and Investigation
 
 ## Overview
 
-Day 14 marks the operational transition from detection engineering to active Security Operations Center (SOC) analysis. This project simulates the workflow of a Level 1 (Tier 1) SOC Analyst tasked with triaging, investigating, classifying, and escalating security alerts from an enterprise alert queue.
+This project simulates the end-to-end alert triage workflow, incident investigation methodology, and automation tooling utilized by Level 1 Security Operations Centre (SOC) analysts. It establishes rigorous documentation standards, defensive Python programming, and structured incident escalation workflows.
 
-## Mission Objectives
+## Learning Objectives
 
-- **Alert Queue Management:** Acknowledge, prioritize, and manage incoming security alerts.
-- **Structured Triage Workflow:** Apply a systematic investigation methodology to analyze incident telemetry.
-- **Classification Mastery:** Distinguish accurately between True Positives (TP), False Positives (FP), Benign Positives (BP), and Inconclusive findings.
-- **MITRE ATT&CK Mapping:** Align observed behaviors with standard adversary tactics, techniques, and procedures (TTPs).
-- **Automation & Scripting:** Build a Python alert-queue management utility to automate ticket handling and status updates.
-- **Incident Escalation & Reporting:** Produce detailed handover reports and investigation documentation for Tier 2 Incident Response teams.
+- Understand SOC operations, ticketing lifecycles, and shift handovers.
+- Distinguish between raw events, security alerts, and validated incidents.
+- Master alert severity versus investigation priority.
+- Investigate security alerts using structured baseline comparison and evidence gap analysis.
+- Classify alert outcomes (`True Positive`, `False Positive`, `Benign Positive`, `Inconclusive`).
+- Apply appropriate NIST-aligned escalation procedures.
+- Connect observed behaviors to the **MITRE ATT&CK® Framework**.
+- Build, test, and validate a custom Python alert-queue parsing utility.
+- Produce professional executive SOC case reports and chain-of-custody ledgers.
 
-## Environment & Prerequisites
+## Environment & Tech Stack
 
-- **Host Environment:** Linux (Parrot OS / Ubuntu)
-- **Programming Language:** Python 3 (Standard Library)
-- **Frameworks:** MITRE ATT&CK Matrix for Enterprise
-- **Data Formats:** JSON / Markdown
+- **Host Operating System:** Windows 
+- **Virtualization:** Oracle VirtualBox
+- **Guest Operating System:** Parrot OS
+- **Programming Language:** Python 3.13 (Standard Library: `pathlib`, `json`, `argparse`, `sys`, `datetime`)
+- **Data Format:** JSON Lines (`.jsonl`)
+- **Frameworks & Standards:** NIST SP 800-61 Rev. 3, MITRE ATT&CK®
 
 ## Repository Structure
 
-- `notes/`: Conceptual technical notes on SOC operations, triage frameworks, and classification standards.
-- `lab/`: Simulated alert queues and event context files.
-- `scripts/`: Custom Python alert-queue management utility.
-- `reports/`: Investigation notes and formal escalation reports.
-- `screenshots/`: Visual evidence documenting dashboard triage and utility execution.
-
-## Alert Queue Overview
-
-| Alert ID | Alert Name | Severity | Initial Status |
-| :--- | :--- | :--- | :--- |
-| `ALT-2026-001` | **Repeated Failed Logons Followed by Success** | High | New |
-| `ALT-2026-002` | **Failed SSH Authentication** | Medium | New |
-| `ALT-2026-003` | **Unexpected Service Start** | Medium | New |
-
-## Key Concepts Mastered
-
-1. **Alert Prioritization:** Evaluating risk, business context, and potential operational impact over raw alert volume.
-2. **Evidentiary Standard:** Basing incident conclusions strictly on verifiable telemetry rather than assumptions.
-3. **Escalation Protocols:** Structuring handovers to senior responders with complete context, timelines, and IoCs.
-
-## References
-
-- [MITRE ATT&CK Framework](https://attack.mitre.org/)
-- [NIST Computer Security Incident Handling Guide (SP 800-61 Rev. 2)](https://csrc.nist.gov/publications/detail/sp/800-61/rev-2/final)
+```text
+day-14/
+├── README.md
+├── notes/               # Operational guides, MITRE mapping, escalation protocols, chain of custody
+├── lab/data/            # Synthetic alert queues and baseline case context
+├── scripts/             # Python automation utilities (triage_queue.py)
+├── cases/               # Individual incident dossiers (SOC-2026-001 through 003)
+├── reports/             # Executive investigation summaries and test result reports
+├── tests/               # Malformed test inputs and QA validation files
+└── screenshots/         # Portfolio evidence captures (Screenshots 18 through 23)
