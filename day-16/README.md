@@ -1,47 +1,54 @@
-# Day 16 - DNS Security, Investigation & Threat Detection
+# Day 16 - DNS Security and Investigation
 
-## Executive Overview
+## Overview
+This project explores DNS architecture, DNS troubleshooting, network-level DNS analysis, and defensive DNS detection as part of the 100 Days of Cybersecurity Challenge.
 
-Day 16 of my Cybersecurity Journey focuses on mastering the **Domain Name System (DNS)** from a defensive security perspective. Building directly on yesterday's network traffic analysis foundation, this module explores the complete DNS resolution hierarchy, core resource records (`A`, `AAAA`, `CNAME`, `MX`, `TXT`), command-line forensic tools (`dig`, `nslookup`, `Resolve-DnsName`), Wireshark packet inspection, and threat detection techniques for identifying DNS abuse such as tunneling and Domain Generation Algorithms (DGA).
+## Learning Objectives
+- Understand DNS resolution.
+- Explain recursive and authoritative DNS.
+- Identify DNS record types.
+- Understand DNS caching and TTL.
+- Examine DNS response codes.
+- Understand DNSSEC, DoH, and DoT.
+- Investigate DNS packets using Wireshark.
+- Use `dig` and `nslookup`.
+- Build a Python DNS telemetry analyzer.
+- Identify unusual DNS behavior.
+- Produce an evidence-based investigation report.
 
-Rather than relying purely on theoretical knowledge, this module establishes structured analytical frameworks for Security Operations Center (SOC) analysts to triage anomalous DNS telemetry.
+## Environment
+- **Host:** Windows / Linux Mint Base
+- **Virtualization:** Oracle VirtualBox
+- **Guest OS:** Parrot Security OS
+- **Tools:** `dig`, `nslookup`, Wireshark, TShark
+- **Language:** Python 3
+- **Dependencies:** Python standard library (`argparse`, `ipaddress`, `json`, `pathlib`, `collections`, `datetime`)
 
-## Repository Structure
+## Main Project
+A custom Python utility (`dns_analyzer.py`) that analyzes synthetic DNS telemetry (`dns-events.jsonl`) and identifies clients exhibiting multiple unusual indicators.
 
-```
-day-16/
-├── lab/
-│   └── data/                 # Sample practice DNS capture files (.pcapng)
-├── scripts/                  # Custom DNS investigation utilities
-├── tests/                    # Script validation suites and error-handling tests
-├── screenshots/              # Terminal execution and tool evidence captures
-├── notes/                    # Comprehensive technical knowledge base (.md)
-│   └── dns-security-fundamentals.md
-├── reports/                  # Executive-level DNS incident investigation reports
-└── README.md                 # Day 16 specific master landing page (this file)
+## Detection Characteristics
+- Query frequency (sliding-window peak analysis)
+- Query-name length (subdomain character limits)
+- TXT-query proportion (protocol abuse tracking)
+- NXDOMAIN frequency (error code ratios)
 
-```
+## Testing
+Comprehensive test suite executed covering syntax compilation, baseline execution, argument threshold tuning (`--min-queries`, `--long-name`), missing file error handling (Exit Code `2`), and malformed JSON resilience. Documented in `reports/test-results.md`.
 
-## 1. Core Learning Objectives & Modules
+## Findings
+Offline analysis of 17 synthetic events across 3 clients identified `192.0.2.25` as a review candidate triggering high query frequency, long query names, and high TXT proportions. Documented in `reports/dns-investigation-report.md`.
 
-* **DNS Hierarchy & Resolution:** Mastering the 4-tier resolution path from stub resolvers and recursive resolvers to root, TLD, and authoritative name servers.
-* **Protocol Record Analysis:** Deep-dive examination of `A`, `AAAA`, `CNAME`, `MX`, and `TXT` records, paying special attention to high-risk abuse vectors like DNS tunneling.
-* **CLI Diagnostic Mastery:** Using `dig` (with `+trace` and specific server queries), `nslookup`, and PowerShell's `Resolve-DnsName` to inspect live and offline DNS infrastructure.
-* **Advanced Concepts:** Evaluating Time To Live (TTL) manipulation in Fast Flux networks, DNSSEC cryptographic verification, and the operational security challenges introduced by DoH (DNS over HTTPS) and DoT (DNS over TLS).
+## Limitations
+This tool performs heuristic analysis only. It does not establish confirmed malicious activity, command-and-control communication, or data exfiltration without correlative endpoint and resolver evidence.
 
-## 2. Threat Detection & SOC Analysis
+## Skills Demonstrated
+- Network traffic capture and analysis using Wireshark and `dig`.
+- Python-based log parsing, validation, and algorithmic metric calculation.
+- Security detection engineering, hypothesis formulation, and alert tuning.
+- Professional incident investigation reporting and documentation.
 
-* **Domain Generation Algorithms (DGA):** Identifying malware command-and-control communication characterized by massive spikes in `NXDOMAIN` (RCODE 3) responses from randomized subdomains.
-* **DNS Exfiltration & Tunneling:** Recognizing encoded data smuggling over `TXT` or high-entropy subdomain queries that bypass perimeter firewalls.
-* **MITRE ATT&CK Alignment:** Mapping DNS-based threats to adversary tactics such as Command and Control (T1071.004 - Application Layer Protocol: DNS) and Exfiltration (T1048 - Exfiltration Over Alternative Protocol).
-
-## 3. Professional Standards & Analyst Habits
-
-* Never assuming single queries indicate compromise without contextual correlation.
-* Normalizing timestamps to UTC across resolver logs, firewall records, and endpoint telemetry.
-* Preserving evidence integrity and documenting analysis steps systematically.
-
-## Author & Fellowship Information
-
-* **Analyst & Engineer:** Serah Mulwa
-* **Core Curriculum:** Cybersecurity Journey - 100 Days From Scratch (Day 16)
+## References
+- IETF RFC 1035: Domain Names - Implementation and Specification
+- MITRE ATT&CK Framework: T1071.004 (Application Layer Protocol: DNS)
+- Microsoft DNS Troubleshooting Guidance
