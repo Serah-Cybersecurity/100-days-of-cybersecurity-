@@ -4,7 +4,7 @@
 
 * **Case ID:** DAY15-NTA-001
 * **Investigation Type:** Offline PCAP Analysis
-* **Analyst:** Serah Kathini Mulwa
+* **Analyst:** Serah Mulwa
 * **Date:** November 3, 2026
 
 ---
