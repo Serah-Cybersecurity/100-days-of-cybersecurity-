@@ -1,6 +1,6 @@
 # Technical Note: Enterprise SIEM Architecture, Ingestion Pipelines & Data Quality Engineering
 
-**Author:** Serah  Mulwa
+**Author:** Serah Mulwa
 
 **Module:** Day 21 - SIEM Architecture, Log Ingestion & Security Data Engineering
 
