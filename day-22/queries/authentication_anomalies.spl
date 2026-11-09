@@ -1,0 +1,65 @@
+/*
+================================================================================
+QUERY TITLE      : Authentication Anomaly & Brute Force Detection
+FILE NAME        : queries/01_authentication_anomalies.spl
+AUTHOR           : Serah Kathini Mulwa
+TARGET PLATFORM  : Splunk Enterprise / Splunk Cloud
+TARGET INDEX     : cybersecurity_lab
+SOURCETYPE       : _json
+DATE CREATED     : 2026-11-08
+STATUS           : Production / Portfolio Ready
+================================================================================
+
+OBJECTIVE & ANALYTICAL INTENT:
+--------------------------------------------------------------------------------
+This threat-hunting SPL query scans normalized security telemetry to detect 
+high-frequency authentication failure anomalies, potential brute-force attacks, 
+and credential stuffing patterns originating from internal or external IPs.
+
+It aggregates events across heterogeneous systems (Windows Security Events, 
+Linux Syslog, Firewall sessions) by evaluating raw failure volume alongside 
+the number of distinct targeted accounts within the search window.
+
+KEY FIELDS EVALUATED:
+--------------------------------------------------------------------------------
+- index                 : Scopes search to the isolated lab index (cybersecurity_lab).
+- event.category        : Filters specifically for 'authentication' telemetry.
+- event.action          : Identifies 'authentication_failure' outcomes.
+- source.ip             : The originating IP address of the login attempt.
+- user.name             : The targeted user identity / account name.
+- host.name             : The target workstation, domain controller, or server.
+
+ANALYTICAL INTERPRETATION & SOC WORKFLOW:
+--------------------------------------------------------------------------------
+1. Threshold Trigger   : Flags any source IP exceeding 3 failed attempts (total_failures > 3).
+2. Cardinality Analysis: Calculates distinct targeted accounts using dc(user.name).
+   - High failures + 1 account  = Targeted Brute Force / Password Spray.
+   - High failures + N accounts = Multi-Account Credential Stuffing.
+3. False Positive Check: Single users mistyping passwords will produce low total_failures 
+                         and dc(user.name)=1, filtering out noise.
+================================================================================
+*/
+
+// STAGE 1: Scope search to lab index and filter for authentication failure events
+index=cybersecurity_lab event.category="authentication" event.action="authentication_failure"
+
+// STAGE 2: Perform statistical aggregation by originating source IP and target host
+| stats 
+    count as total_failures, 
+    dc(user.name) as distinct_targeted_accounts, 
+    values(user.name) as targeted_account_list,
+    earliest(@timestamp) as first_observed_attempt,
+    latest(@timestamp) as last_observed_attempt
+    by source.ip, host.name
+
+// STAGE 3: Apply post-aggregation anomaly threshold filter
+| where total_failures > 3
+
+// STAGE 4: Calculate duration delta in minutes between first and last attack event
+| eval attack_duration_minutes = round((parse_datetime(last_observed_attempt, "%Y-%m-%dT%H:%M:%SZ") - parse_datetime(first_observed_attempt, "%Y-%m-%dT%H:%M:%SZ")) / 60, 2)
+
+// STAGE 5: Order results by failure magnitude to highlight high-risk threat actors
+| sort - total_failures
+
+// STAGE 6: Structure tabular output for SOC analyst review and dashboard rendering
+| fields source.ip, host.name, total_failures, distinct_targeted_accounts, targeted_account_list, first_observed_attempt, last_observed_attempt, attack_duration_minutes
