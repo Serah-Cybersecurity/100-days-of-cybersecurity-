@@ -1,67 +1,30 @@
-Splunk SPL
 /*
 ================================================================================
-QUERY TITLE      : Authentication Anomaly & Brute Force Detection
+TITLE            : Authentication Failure Summary by Source IP
 FILE NAME        : authentication_anomalies.SPL
 AUTHOR           : Serah Kathini Mulwa
-TARGET PLATFORM  : Splunk Enterprise / Splunk Cloud
 TARGET INDEX     : cybersecurity_lab
 SOURCETYPE       : _json
-DATE CREATED     : 2026-11-08
-STATUS           : Tested & Portfolio Ready (Lab-Calibrated)
+SOURCE DATASET   : normalised_events.jsonl (8 synthetic lab events)
+STATUS           : Verified in Splunk Lab (All time on synthetic sample)
 ================================================================================
 
-OBJECTIVE & ANALYTICAL INTENT:
+OBJECTIVE:
 --------------------------------------------------------------------------------
-This threat-hunting SPL query scans normalized security telemetry to inspect
-authentication failure volume, targeted accounts, and timing across sources
-and hosts in the cybersecurity_lab index.
+Summarizes authentication failure events in the cybersecurity_lab index by
+originating source.ip and sorts results from highest to lowest failure count.
 
-Note on field extraction and lab dataset calibration:
-- In Splunk _json ingestion, nested JSON keys may appear as dotted fields or
-  multi-value/array fields (such as "event.category{}"). Always verify field
-  extraction in Splunk search before relying on a filter.
-- The Day 22 lab sample (normalised_events.jsonl) contains 8 events total,
-  including 2 failed authentication events from 192.0.2.25. A production
-  threshold like > 3 filters out a 2-event lab sample, so this query defaults
-  to total_failures >= 2 for lab testing and documents how to raise it for
-  higher-volume hunting.
-
-KEY FIELDS EVALUATED:
+WHAT THIS LAB OUTPUT SHOWS:
 --------------------------------------------------------------------------------
-- index                 : Scopes search to the isolated lab index (cybersecurity_lab).
-- sourcetype            : Targets structured JSON lab telemetry (_json).
-- event.outcome         : Identifies authentication outcomes (e.g., "failure").
-- event.action          : Identifies event actions (e.g., "authentication_failure").
-- source.ip             : Originating IP address of the authentication attempt.
-- user.name             : Targeted user account name.
-- host.name             : Target host name when present in the event.
-- _time                 : Splunk event timestamp (epoch seconds).
-
-ANALYTICAL INTERPRETATION & SOC WORKFLOW:
---------------------------------------------------------------------------------
-1. Threshold Trigger   : Flags source IPs meeting total_failures >= 2 in the
-                         lab sample (raise to > 3 or higher in broader hunts).
-2. Cardinality Analysis: Calculates distinct targeted accounts via dc(user.name).
-  - Elevated failures + 1 account  = Targeted brute-force or password attempt lead.
-  - Elevated failures + N accounts = Potential multi-account spray/stuffing lead.
-3. False Positive Check: Low failure counts or isolated typos require context
-                         (successful logins, host logs, source context) rather
-                         than assuming malicious intent.
+- In the Day 22 synthetic dataset (8 events total, 2 authentication_failure
+  events), source.ip "192.0.2.25" shows failed_attempts = 2.
+- A count of 2 in a small synthetic lab sample is an observed lab count, not
+  proof of a confirmed attack on its own. Real SOC tuning requires higher
+  thresholds, time-window context, and additional telemetry (such as account
+  names, target hosts, and authentication logs).
 ================================================================================
 */
 
 index=cybersecurity_lab sourcetype="_json" event.outcome="failure"
-| stats
-    count AS total_failures,
-    dc(user.name) AS distinct_targeted_accounts,
-    values(user.name) AS targeted_account_list,
-    earliest(_time) AS first_epoch,
-    latest(_time) AS last_epoch
-    BY source.ip, host.name
-| where total_failures >= 2
-| eval first_observed = strftime(first_epoch, "%Y-%m-%d %H:%M:%S %Z"),
-       last_observed = strftime(last_epoch, "%Y-%m-%d %H:%M:%S %Z"),
-       duration_minutes = round((last_epoch - first_epoch) / 60, 2)
-| sort - total_failures
-| table source.ip, host.name, total_failures, distinct_targeted_accounts, targeted_acc
+| stats count AS failed_attempts BY source.ip
+| sort - failed_attempts
