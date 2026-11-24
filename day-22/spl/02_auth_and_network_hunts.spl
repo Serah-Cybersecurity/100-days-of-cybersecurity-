@@ -1,0 +1,32 @@
+# ==============================================================================
+# File: 02_auth_and_network_hunts.spl
+# Purpose: Investigate authentication outcomes, failed login sources/accounts,
+#          and network/IDS/firewall event activity in cybersecurity_lab.
+# Note: Verify exact extracted field names (e.g., event.outcome, source.ip,
+#       user.name, event.action) rather than assuming unextracted keys.
+# ==============================================================================
+
+# 1. Authentication outcomes comparison (failure vs. success)
+index=cybersecurity_lab sourcetype="_json" event.action="authentication_*"
+| stats count by event.outcome
+| sort - count
+
+# 2. Failed authentication by source IP and distinct accounts targeted
+index=cybersecurity_lab sourcetype="_json" event.outcome="failure"
+| stats count AS failed_attempts dc(user.name) AS unique_accounts by source.ip
+| sort - failed_attempts
+
+# 3. Failed authentication grouped by user account
+index=cybersecurity_lab sourcetype="_json" event.outcome="failure"
+| stats count AS failed_attempts by user.name
+| sort - failed_attempts
+
+# 4. Breakdown of all event.action values across the dataset
+index=cybersecurity_lab sourcetype="_json"
+| stats count by event.action
+| sort - count
+
+# 5. Network, IDS alert, and firewall connection activity review
+index=cybersecurity_lab sourcetype="_json" event.action IN ("intrusion_detection_alert", "network_connection_allowed", "network_connection_blocked")
+| table _time event.action source.ip destination.ip observer.type
+| sort _time
