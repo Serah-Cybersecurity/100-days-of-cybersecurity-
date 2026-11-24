@@ -1,147 +1,154 @@
 # Security Operations Overview — Training Environment
 
-## 1. Dashboard Metadata & Environment Overview
+**Author:** Serah Kathini Mulwa  
+**Program:** Women Techsters Fellowship — Cybersecurity Track  
+**Module:** Day 22 — Splunk Fundamentals & Search Processing Language (SPL)  
+**Target Index:** `cybersecurity_lab` (`sourcetype="_json"`)  
+**Visual Reference:** `screenshots/day22-dashboard-overview.png`
 
-- **Dashboard Title:** `Security Operations Overview — Training Environment`
+---
+
+## 1. Dashboard Overview & Operational Purpose
+
+I designed **Security Operations Overview — Training Environment** as a centralized threat-hunting and triage view for my Day 22 Splunk investigation workbench. Instead of throwing random charts onto a screen just because Splunk can render them, I built every panel to answer a specific operational question: *How much data is flowing into the lab index? What is happening with authentication? Are network connections being allowed or blocked? And where should I look next as a SOC analyst?*
+
+- **Dashboard Title:** `Security Operations Overview — Training Environment` *(displayed in Splunk Web header as `Security Operations Overview - Training Environment`)*
 - **Dashboard ID:** `security_operations_overview__training_environment`
-- **Description:** Centralized threat-hunting overview tracking authentication anomalies, network traffic, firewall decisions, and ingestion volumes.
 - **Permissions / Scope:** `Shared in App`
 - **Target Index:** `cybersecurity_lab`
-- **Source Dataset:** `normalised_events.jsonl` (ingested via Splunk Web on Splunk Enterprise running on a Parrot OS virtual machine)
-- **Recommended Time Range:** **All time** (for static training/sample datasets; switch to rolling windows such as `Last 24 hours` or `Last 7 days` for live streaming telemetry)
+- **Source Dataset:** `normalised_events.jsonl` (8 normalized Elastic Common Schema events carried over from the Day 21 Python Mini-SIEM pipeline and uploaded via Splunk Web into the `cybersecurity_lab` index)
+- **Recommended Time Range:** **All time** for static lab/training events (switch to rolling windows such as `Last 24 hours` or `Last 7 days` when monitoring live streaming telemetry)
 - **Visual Reference:** `screenshots/day22-dashboard-overview.png`
 
 ---
 
-## 2. Data Ingestion, Field Extraction & Schema Notes
+## 2. Schema Extraction & SPL Quirks I Ran Into
 
-When `normalised_events.jsonl` is indexed into `cybersecurity_lab` using `_json` source type extraction, nested JSON objects and arrays are mapped into dotted and multi-value Splunk field names:
+Testing queries directly against `normalised_events.jsonl` after indexing with `sourcetype="_json"` taught me a few practical details about how Splunk handles normalized JSON fields:
 
-- **Array Field Syntax (`"event.category{}"`):** Splunk extracts JSON array fields such as `event.category` with curly braces (`event.category{}`). Filtering or grouping by category should reference `"event.category{}"` rather than `event.category` so array elements are matched reliably.
-- **Observed Categories & Outcomes in Sample Dataset:**
-  - `"event.category{}"="authentication"` with `event.outcome` values `failure` (`authentication_failure`) and `success` (`authentication_success`)
-  - `"event.category{}"="network"` with `event.outcome` / `event.action` values including `network_connection_allowed`, `network_connection_blocked`, and `intrusion_detection_alert`
-- **Multi-Field `stats` Grouping Caution:** When running ad-hoc `stats` queries across multiple fields (`stats count by fieldA, fieldB, fieldC`), Splunk only includes events where all grouped fields are present on the same event. Keep group-by lists scoped to fields relevant to the specific event subset.
+- **JSON Array Field Syntax (`"event.category{}"`):** Splunk extracts array fields like `event.category` with curly braces (`event.category{}`). Using `"event.category{}"` when filtering or grouping matches array elements reliably instead of missing multi-value or nested array entries.
+- **What Appears in This Sample Dataset:**
+  - `"event.category{}"="authentication"` includes events with `event.outcome` values of `failure` (`authentication_failure`) and `success` (`authentication_success`).
+  - `"event.category{}"="network"` includes network and detection records such as `network_connection_allowed`, `network_connection_blocked`, and `intrusion_detection_alert`.
+- **Multi-Field `stats` Grouping Behavior:** When grouping with `stats count by fieldA, fieldB, fieldC`, Splunk only includes events where *every* grouped field exists on that event. To avoid accidentally hiding valid records that lack optional fields, I keep each panel's `by` clause focused on fields that actually belong to that subset of events.
 
 ---
 
-## 3. Top-to-Bottom Dashboard Layout Architecture
+## 3. Top-to-Bottom Dashboard Layout
 
-The dashboard is structured into three clear horizontal bands from top to bottom so analysts see high-level volume first, trend/distribution charts in the middle, and granular investigation tables at the bottom:
+I organized the dashboard from top to bottom following a standard SOC triage flow—starting with high-level ingestion health, moving into trend and outcome comparisons, and ending with specific tables for analyst drill-down:
 
-1. **Top Band (KPI Summary):**
+1. **Top Band — Headline KPI:**
    - **Total Events** (`Single Value`)
-2. **Middle Band (Trends, Outcomes & Decisions):**
+2. **Middle Band — Trends, Outcomes & Decisions:**
    - **Event Volume Over Time** (`Line Chart`)
    - **Authentication Outcomes** (`Column Chart`)
    - **Firewall Decisions** (`Column Chart`)
-3. **Bottom Band (Granular Investigation Tables):**
+3. **Bottom Band — Investigation Tables:**
    - **Failed Authentication by User** (`Statistics Table`)
    - **Failed Authentication by Source** (`Statistics Table`)
    - **DNS Activity** (`Statistics Table`)
 
 ---
 
-## 4. Detailed Panel Specifications
+## 4. Panel-by-Panel Specifications
 
 ### Panel 1: Total Events
-- **Layout Position:** Top Band (KPI Card)
+- **Layout Position:** Top Band (Single Value KPI)
 - **Visualization Type:** Single Value
 - **SPL Query:**
   ```spl
   index=cybersecurity_lab | stats count
   ```
-- **Operational Purpose:** Provides an immediate headline count of total normalized security events ingested into `cybersecurity_lab` over the selected time range, confirming data flow and establishing baseline scale before diving into specific categories.
-- **Interpreting Spikes & Anomalies:** A sudden jump in total events can indicate a burst of scanner/brute-force noise, an IDS/firewall alert storm, a newly enabled log source, or duplicate ingestion. A drop to `0` or an unexpected flatline during active lab/telemetry periods points to ingestion delays, forwarder/upload issues, or an overly narrow time filter.
-- **Limitations:** Aggregates every event in `cybersecurity_lab` indiscriminately—it does not distinguish high-severity alerts from routine allowed traffic, nor does it validate field completeness or timestamp accuracy.
+- **Purpose:** Gives an immediate count of all normalized events inside `cybersecurity_lab` for the chosen time window so I know right away that data is indexed and searchable.
+- **How I Interpret Results & Spikes:** A sudden jump in event volume can point to noisy authentication retries, firewall blocks, IDS alerts, or a fresh log batch upload. A `0` or flatline during an active check usually means the wrong time picker range is selected, the index name is off, or data hasn't finished indexing.
+- **Limitations:** It is a raw total across everything in `cybersecurity_lab`. It does not separate high-signal alerts from routine events or tell me whether timestamps and fields were parsed cleanly.
 
 ---
 
 ### Panel 2: Event Volume Over Time
-- **Layout Position:** Middle Band (Trend Chart)
+- **Layout Position:** Middle Band (Line Chart)
 - **Visualization Type:** Line Chart
 - **SPL Query:**
   ```spl
   index=cybersecurity_lab | timechart span=1h count
   ```
-- **Operational Purpose:** Visualizes event ingestion and activity cadence across hourly buckets (`span=1h`) to spot temporal clustering, off-hours activity, and ingestion gaps.
-- **Interpreting Spikes & Anomalies:** Sharp hourly peaks or off-hours activity clusters warrant correlation with authentication failures, firewall blocks, or IDS alerts during the same time window. Empty intervals or steps can reflect sparse sample timestamps, time-range boundaries, or collection interruptions.
-- **Limitations:** Fixed `span=1h` bucketing can smooth out short, high-intensity bursts (such as a rapid 2-minute brute-force script) and may appear flat or single-point when sample events share identical or closely spaced timestamps.
+- **Purpose:** Tracks event volume across one-hour buckets (`span=1h`) so I can see when activity clusters or drops off over time.
+- **How I Interpret Results & Spikes:** Spikes or unusual off-hours activity are prompts to check authentication failures, blocked connections, and IDS alerts during that exact time window. Sparse points or flat stretches reflect how timestamps are distributed in the dataset or time-range boundaries.
+- **Limitations:** Using `span=1h` smooths out short bursts—for example, a fast brute-force script running over three minutes inside a single hour won't show minute-by-minute peaks here. In a small sample dataset with events clustered around one timestamp, the chart can look minimal.
 
 ---
 
 ### Panel 3: Authentication Outcomes
-- **Layout Position:** Middle Band (Comparison Chart)
+- **Layout Position:** Middle Band (Column Chart)
 - **Visualization Type:** Column Chart
 - **SPL Query:**
   ```spl
   index=cybersecurity_lab "event.category{}"="authentication" | stats count by event.outcome | sort - count
   ```
-- **Operational Purpose:** Compares authentication event outcomes (`failure` vs. `success`) across authentication records to give analysts a quick ratio of rejected vs. successful logins.
-- **Interpreting Spikes & Anomalies:** A high volume or sudden spike in `failure` events suggests credential guessing, password spraying, misconfigured service accounts, or expired tokens. A `success` event occurring right alongside or immediately after a wave of `failure` events is a high-priority lead to investigate for potential account compromise.
-- **Limitations:** Depends on accurate normalization of `"event.category{}"="authentication"` and `event.outcome`. Outcome counts alone do not reveal *which* user accounts or source IPs were involved, nor do they prove whether a `success` was legitimate or unauthorized.
+- **Purpose:** Compares `failure` versus `success` counts across authentication events so I can quickly spot abnormal failure ratios.
+- **How I Interpret Results & Spikes:** Elevated `failure` counts can point to password guessing, password spraying, expired credentials, or a broken service script. If a `success` shows up right alongside or right after a burst of failures, that is a strong lead to investigate further.
+- **Limitations:** This panel relies on clean normalization of `"event.category{}"="authentication"` and `event.outcome`. Outcome totals alone do not show which user or IP was involved, and a successful login is not automatically malicious or automatically safe without context.
 
 ---
 
 ### Panel 4: Firewall Decisions
-- **Layout Position:** Middle Band (Action Distribution Chart)
+- **Layout Position:** Middle Band (Column Chart)
 - **Visualization Type:** Column Chart
 - **SPL Query:**
   ```spl
   index=cybersecurity_lab | stats count by event.action | sort - count
   ```
-- **Operational Purpose:** Breaks down event counts by `event.action` across `cybersecurity_lab` so analysts can see the distribution of allowed connections, blocked connections, authentication actions, and intrusion detection alerts at a glance.
-- **Interpreting Spikes & Anomalies:** Elevated counts of blocked/denied actions (`network_connection_blocked`) or intrusion detection alerts (`intrusion_detection_alert`) can indicate port scanning, lateral movement probes, or policy violations. Conversely, an unexpected surge in allowed actions (`network_connection_allowed`) to unusual destinations or ports warrants closer review.
-- **Limitations:** Because this query groups by `event.action` across `index=cybersecurity_lab` without restricting to a single log source or action subset, it includes non-firewall actions (such as authentication actions or IDS alerts) if present in `event.action`. Long action names can also be visually truncated in narrow column chart labels.
+- **Purpose:** Displays counts across `event.action` values in `cybersecurity_lab` so I can see allowed connections, blocked connections, authentication outcomes, and IDS alerts side by side.
+- **How I Interpret Results & Spikes:** More `network_connection_blocked` or `intrusion_detection_alert` events can signal scanning, policy denials, or rule hits worth inspecting. An unusual spike in `network_connection_allowed` events to unexpected destinations or ports also deserves a closer look.
+- **Limitations:** Because this query groups by `event.action` across `index=cybersecurity_lab` rather than filtering strictly to firewall/connection events, it includes non-firewall actions if they exist in `event.action`. Also, on a narrower column chart, longer action names get truncated along the horizontal axis (as seen in `screenshots/day22-dashboard-overview.png`), so I pair this chart with raw event or table lookups when reading full action names.
 
 ---
 
 ### Panel 5: Failed Authentication by User
-- **Layout Position:** Bottom Band (Investigation Table)
+- **Layout Position:** Bottom Band (Statistics Table)
 - **Visualization Type:** Statistics Table
 - **SPL Query:**
   ```spl
   index=cybersecurity_lab "event.category{}"="authentication" event.outcome="failure" | stats count by user.name | sort - count
   ```
-- **Operational Purpose:** Ranks targeted user accounts (`user.name`) by number of failed authentication attempts in descending order so analysts can spot targeted accounts or recurring lockouts.
-- **Interpreting Spikes & Anomalies:** High failure counts on a single privileged, service, or high-value account point toward targeted brute-force attempts or a stuck credential/automation job. Repeated failures across many distinct usernames point toward password spraying or enumeration.
-- **Limitations:** Failed login counts indicate *attempted* authentication failures—not confirmed account compromise. Missing or inconsistent `user.name` values (or alias variations for the same identity) can split or omit rows.
+- **Purpose:** Ranks user accounts (`user.name`) from highest to lowest failed authentication count to highlight accounts seeing repeated login failures.
+- **How I Interpret Results & Spikes:** High failures on a single account (such as `alex` in the sample dataset) can indicate targeted guessing against that account or a misconfigured client/automation job. Failures spread across many different usernames point more toward password spraying or account enumeration.
+- **Limitations:** A failed login count is an investigative lead, not proof that an account was compromised. If `user.name` is missing on some events or formatted inconsistently across sources, counts can be split or omitted.
 
 ---
 
 ### Panel 6: Failed Authentication by Source
-- **Layout Position:** Bottom Band (Investigation Table)
+- **Layout Position:** Bottom Band (Statistics Table)
 - **Visualization Type:** Statistics Table
 - **SPL Query:**
   ```spl
   index=cybersecurity_lab "event.category{}"="authentication" event.outcome="failure" | stats count AS failed_attempts dc(user.name) AS unique_accounts by source.ip | sort - failed_attempts
   ```
-- **Operational Purpose:** Aggregates failed authentications by originating IP (`source.ip`), pairing total `failed_attempts` with distinct targeted accounts (`unique_accounts`) to help distinguish single-target brute force from multi-account password spraying or distributed scanners.
-- **Interpreting Spikes & Anomalies:**
-  - **High `failed_attempts` + low `unique_accounts` (e.g., `1`):** Often indicates focused brute-force guessing against a specific account or a misconfigured client/service retrying bad credentials.
-  - **High `failed_attempts` + high `unique_accounts`:** Strongly suggests credential stuffing or password spraying across multiple accounts from a single source.
-- **Limitations:** Source IP addresses can be masked behind NAT gateways, proxies, VPNs, or load balancers—meaning a busy shared IP may represent multiple legitimate users rather than one attacker, while an adversary may rotate across many IPs. Also, `dc(user.name)` only counts events where `user.name` is populated.
+- **Purpose:** Groups failed authentications by `source.ip` and pairs `failed_attempts` with `unique_accounts` (`dc(user.name)`) to help distinguish single-account retries/brute force from multi-account spraying.
+- **How I Interpret Results & Spikes:** A source IP with high `failed_attempts` and a low `unique_accounts` count (such as `1`) suggests focused attempts against one account or a bad credential loop. High `failed_attempts` paired with a high `unique_accounts` count points toward spraying or scanning across multiple accounts.
+- **Limitations:** A `source.ip` can sit behind NAT, a proxy, a VPN, or a shared gateway, meaning multiple users may share one IP—or an attacker may rotate across multiple IPs. Also, `dc(user.name)` only reflects events where `user.name` is present.
 
 ---
 
 ### Panel 7: DNS Activity
-- **Layout Position:** Bottom Band (Investigation Table)
+- **Layout Position:** Bottom Band (Statistics Table)
 - **Visualization Type:** Statistics Table
 - **SPL Query:**
   ```spl
   index=cybersecurity_lab "event.category{}"="network" | stats count by event.action | sort - count
   ```
-- **Operational Purpose:** Surfaces network-category activity grouped by `event.action` within `index=cybersecurity_lab` to review connection allowances, blocks, and detection alerts alongside network traffic behavior.
-- **Interpreting Spikes & Anomalies:** Unusual spikes in specific network actions—such as `intrusion_detection_alert` or `network_connection_blocked`—warrant pivoting to source/destination IPs, ports, and timestamps for deeper triage.
-- **Limitations:** In the current 8-event `normalised_events.jsonl` training sample, network records represent connection and IDS events (`network_connection_allowed`, `network_connection_blocked`, `intrusion_detection_alert`) rather than dedicated DNS query/response logs, and grouping solely by `event.action` does not show queried domain names, record types, or destination hosts.
+- **Purpose:** Summarizes network-category events by `event.action` inside `index=cybersecurity_lab` to highlight connection allowances, blocks, and detection alerts.
+- **How I Interpret Results & Spikes:** Spikes in `intrusion_detection_alert` or `network_connection_blocked` warrant pivoting to source/destination IPs, ports, and timestamps to see what traffic triggered them.
+- **Limitations:** In my current 8-event `normalised_events.jsonl` sample, network events consist of connection and Suricata alert records (`intrusion_detection_alert`, `network_connection_allowed`, `network_connection_blocked`) rather than dedicated DNS query/response logs, and grouping only by `event.action` does not show domain names (`dns.question.name`) or response codes. Once DNS query logs are included in future datasets, I can extend this panel to inspect queried domains and record types directly.
 
 ---
 
-## 5. Screenshot & Verification Checklist
+## 5. Verification & Readiness Checklist
 
-- [x] Dashboard created as **Security Operations Overview — Training Environment** with `Shared in App` permissions
-- [x] Array category field handled via `"event.category{}"`
-- [x] All 7 panels configured, mapped to `index=cybersecurity_lab`, and arranged top-to-bottom (`Total Events` at top, charts in middle, tables at bottom)
-- [x] **Firewall Decisions** verified rendering non-empty counts
-- [ ] Final dashboard screenshot saved at `screenshots/day22-dashboard-overview.png`
-- [ ] Design documentation saved at `dashboards/dashboard_design.md`
+- [x] Dashboard created as **Security Operations Overview — Training Environment** (`Shared in App`)
+- [x] Array category field handled cleanly using `"event.category{}"`
+- [x] All 7 panels configured, scoped to `index=cybersecurity_lab`, and arranged top-to-bottom (`Total Events` at top, charts in middle, tables at bottom)
+- [x] Verified panel rendering and documented known dataset and visualization limitations
+- [x] Final dashboard screenshot saved at `screenshots/day22-dashboard-overview.png`
+- [x] Design documentation saved at `dashboards/dashboard_design.md`
