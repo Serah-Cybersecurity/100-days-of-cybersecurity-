@@ -1,0 +1,13 @@
+# Mini-SIEM Ingestion Pipeline Dependencies
+# Built entirely using Python's robust standard library for zero external bloat.
+# Python Version: 3.8+
+
+# Standard Library Modules Utilized:
+# - json (JSON parsing and formatting)
+# - pathlib (Cross-platform filesystem path manipulation)
+# - ipaddress (Rigorous IPv4/IPv6 validation)
+# - datetime (ISO-8601 UTC timestamp generation)
+# - unittest (Automated regression testing framework)
+# - hashlib (Cryptographic SHA-256 integrity baselines)
+
+# No third-party packages required for core ingestion and normalisation.

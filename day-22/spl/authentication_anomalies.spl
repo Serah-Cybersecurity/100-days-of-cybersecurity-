@@ -1,0 +1,30 @@
+/*
+================================================================================
+TITLE            : Authentication Failure Summary by Source IP
+FILE NAME        : authentication_anomalies.SPL
+AUTHOR           : Serah Kathini Mulwa
+TARGET INDEX     : cybersecurity_lab
+SOURCETYPE       : _json
+SOURCE DATASET   : normalised_events.jsonl (8 synthetic lab events)
+STATUS           : Verified in Splunk Lab (All time on synthetic sample)
+================================================================================
+
+OBJECTIVE:
+--------------------------------------------------------------------------------
+Summarizes authentication failure events in the cybersecurity_lab index by
+originating source.ip and sorts results from highest to lowest failure count.
+
+WHAT THIS LAB OUTPUT SHOWS:
+--------------------------------------------------------------------------------
+- In the Day 22 synthetic dataset (8 events total, 2 authentication_failure
+  events), source.ip "192.0.2.25" shows failed_attempts = 2.
+- A count of 2 in a small synthetic lab sample is an observed lab count, not
+  proof of a confirmed attack on its own. Real SOC tuning requires higher
+  thresholds, time-window context, and additional telemetry (such as account
+  names, target hosts, and authentication logs).
+================================================================================
+*/
+
+index=cybersecurity_lab sourcetype="_json" event.outcome="failure"
+| stats count AS failed_attempts BY source.ip
+| sort - failed_attempts

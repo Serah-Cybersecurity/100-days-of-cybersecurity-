@@ -1,0 +1,162 @@
+# Security Operations Center (SOC) Investigation Report: Multi-Source Telemetry Analysis
+
+**Analyst:** Serah Kathini Mulwa  
+**Project:** Day 22 - Splunk Fundamentals & Search Processing Language (SPL) Workbench  
+**Target Index:** `cybersecurity_lab` (`sourcetype="_json"`)  
+**Dataset Scope:** 8 Normalized Elastic Common Schema (ECS) Events (`normalised_events.jsonl`)  
+**Investigation Window:** All Time (`2026-11-06T08:00:00Z` – `2026-11-06T08:10:00Z`)
+
+---
+
+## 1. Executive Summary
+
+Following the ingestion of normalized security telemetry from the Day 21 Mini-SIEM pipeline into Splunk Enterprise (`index=cybersecurity_lab`), a structured, five-stage threat-hunting investigation was conducted. The objective was to evaluate authentication patterns, isolate high-frequency failure sources, audit network and DNS telemetry, inspect perimeter firewall decisions, and reconstruct temporal activity baselines.
+
+### Key Telemetry Observations
+* **Total Indexed Volume:** 8 discrete JSON events split evenly across `endpoint` (4 events) and `network` (4 events) observer sensors.
+* **Event Action Distribution:**
+  * `authentication_failure`: 2 events
+  * `authentication_success`: 2 events
+  * `intrusion_detection_alert` (Suricata): 2 events
+  * `network_connection_allowed`: 1 event
+  * `network_connection_blocked`: 1 event
+* **Assessment Posture:** All observed anomalies represent **investigative leads** rather than confirmed security incidents. In accordance with SOC analytical standards, raw telemetry facts have been strictly separated from interpretive hypotheses.
+
+---
+
+## 2. Investigation Findings & SPL Query Log
+
+### Module 1: Authentication Activity Baseline
+* **Objective:** Establish baseline authentication counts, evaluate success-to-failure ratios, and identify active user accounts and host endpoints.
+* **Executed SPL Queries:**
+  ```spl
+  index=cybersecurity_lab
+  | stats count by event.action
+  | sort - count
+  ```
+  ```spl
+  index=cybersecurity_lab event.action="authentication_*"
+  | stats count by user.name, host.name, event.action, event.outcome
+  | sort - count
+  ```
+* **Visual Evidence:** `screenshots/07_event_action_breakdown.png`, `screenshots/01_observer_type_distribution.png`
+* **Observed Facts:**
+  * Out of 8 total indexed records, 4 events belong to authentication workflows (`2` failures and `2` successes).
+  * Schema validation during initial search execution revealed that top-level `event.category` was nested as a JSON array (`event.category{}`), requiring direct filtering on `event.action` to accurately isolate authentication telemetry.
+* **Analytical Interpretation:**
+  * A 50% authentication failure rate within a small sample window warrants closer inspection of source origin, but failed logins alone do not confirm malicious intent. Benign causes such as mistyped passwords, expired credentials, or misconfigured service scripts must be ruled out alongside context checks.
+
+---
+
+### Module 2: Failed Authentication Source Attribution
+* **Objective:** Identify originating IP addresses responsible for authentication failures and measure account targeting cardinality (`dc(user.name)`).
+* **Executed SPL Query:**
+  ```spl
+  index=cybersecurity_lab event.action="authentication_failure"
+  | stats count AS failed_attempts, dc(user.name) AS unique_accounts, values(user.name) AS targeted_users by source.ip
+  | sort - failed_attempts
+  ```
+* **Visual Evidence:** `screenshots/04_auth_failures_timechart.png`
+* **Observed Facts:**
+  * All 2 observed `authentication_failure` events occurred within the `08:00` hourly window on `2026-11-06`.
+* **Analytical Interpretation:**
+  * **Separation of Fact vs. Inference:** While the telemetry confirms repeated authentication failures within a concentrated timeframe, the volume (`2` events) is insufficient to classify the behavior as an automated credential-stuffing or brute-force campaign. Escalation would require correlating these failures against downstream successful sessions from the same `source.ip` and inspecting endpoint process creation logs.
+
+---
+
+### Module 3: DNS & Intrusion Detection Telemetry Analysis
+* **Objective:** Audit network name resolution records (`dns.question.name`) and evaluate network intrusion detection system (NIDS) alerts.
+* **Executed SPL Queries:**
+  ```spl
+  index=cybersecurity_lab
+  | stats count by dns.question.name
+  | sort - count
+  ```
+  ```spl
+  index=cybersecurity_lab event.action="intrusion_detection_alert"
+  | table _time host.name event.provider event.action event.outcome
+  ```
+* **Visual Evidence:** `screenshots/06_suricata_ids_alerts.png`, `screenshots/09_expanded_json_event_schema.png`
+* **Observed Facts:**
+  * Querying `dns.question.name` returned 0 results, confirming that DNS query payload fields are absent from this synthetic dataset batch.
+  * Pivoting to NIDS telemetry identified **2 `intrusion_detection_alert` events** generated by `event.provider="suricata"` at `2026-11-06 08:03:00` and `2026-11-06 08:08:00`, both marked with `event.outcome="detected"`.
+* **Analytical Interpretation:**
+  * An IDS signature trigger (`detected`) indicates that network traffic matched a rule pattern, not that an exploit succeeded. Without full packet capture (PCAP) or endpoint host telemetry (`host.name` was `null` on these network sensor alerts), these alerts remain high-priority leads requiring signature ID inspection.
+
+---
+
+### Module 4: Perimeter Firewall Connection Analysis
+* **Objective:** Inspect network connection records, evaluate permit versus deny firewall decisions, and identify active destination endpoints and ports.
+* **Executed SPL Queries:**
+  ```spl
+  index=cybersecurity_lab event.action=*network*
+  | table _time source.ip destination.ip destination.port event.action
+  ```
+  ```spl
+  index=cybersecurity_lab event.action=*network*
+  | stats count by destination.ip, destination.port
+  | sort - count
+  ```
+* **Visual Evidence:** `screenshots/02_firewall_connection_table.png`, `screenshots/03_network_destination_stats.png`
+* **Observed Facts:**
+  * Two perimeter network connection records were observed:
+    1. `2026-11-06 08:02:00` — Source `192.0.2.25` $\rightarrow$ Destination `198.51.100.20` on TCP port `443` (`network_connection_blocked`).
+    2. `2026-11-06 08:07:00` — Source `192.0.2.50` $\rightarrow$ Destination `198.51.100.50` on TCP port `80` (`network_connection_allowed`).
+* **Analytical Interpretation:**
+  * Outbound traffic to documentation range IP `198.51.100.20:443` was actively blocked by perimeter policy, while HTTP traffic to `198.51.100.50:80` was permitted. High frequency or a blocked status alone does not prove an external IP is malicious; threat intelligence enrichment and internal asset ownership checks are required before implementing permanent blocks.
+
+---
+
+### Module 5: Temporal Activity & Timeline Reconstruction
+* **Objective:** Visualize event velocity and compare outcome distributions over uniform time buckets using `timechart`.
+* **Executed SPL Queries:**
+  ```spl
+  index=cybersecurity_lab
+  | timechart span=1h count
+  ```
+  ```spl
+  index=cybersecurity_lab
+  | timechart span=1h count by event.outcome
+  ```
+* **Visual Evidence:** `screenshots/05_event_outcomes_comparison.png`, `screenshots/04_auth_failures_timechart.png`
+* **Observed Facts:**
+  * All 8 security events occurred within a single 1-hour bucket (`2026-11-06 08:00`), breaking down into `allowed` (1), `denied` (1), `detected` (2), `failure` (2), and `success` (2).
+* **Analytical Interpretation:**
+  * Establishing time-series baselines allows analysts to detect sudden volume spikes or off-hours activity. However, a timechart only highlights *when* volume shifts occur; root-cause determination always requires drilling back down into the underlying raw events.
+
+---
+
+## 3. Core SOC Analyst Principles & Lessons Learned
+
+Throughout this investigation, three foundational operational rules governed query design and evidence interpretation:
+
+1. **Never Assume Compromise (Leads vs. Incidents):**  
+   Repeated authentication failures, blocked firewall connections, or Suricata IDS alerts are investigative leads—never automatic proof of account takeover or breach. Defensible SOC reporting requires separating observed metrics from technical hypotheses and specifying what additional telemetry (e.g., IdP logs, endpoint EDR telemetry, PCAP) is needed to reach a conclusion.
+2. **Explicitly Define `span` in Time-Series Analysis:**  
+   When executing `timechart` commands, explicitly specifying temporal buckets (e.g., `span=1h` or `span=15m`) prevents Splunk from auto-selecting inconsistent intervals, ensuring accurate baseline comparisons across dashboards and reports.
+3. **Filter Early, Aggregate Late (SPL Pipeline Hygiene):**  
+   Because SPL processes data sequentially across pipe (`|`) operators, index scoping (`index=cybersecurity_lab`) and event-level filtering must occur *before* transforming commands like `stats` or `timechart`. Aggregating too early collapses individual log records into summary tables, stripping out granular attributes needed for downstream filtering.
+
+---
+
+## 4. Curated Visual Evidence Index (`screenshots/`)
+
+| File Name | Investigation Module | Description |
+| :--- | :--- | :--- |
+| `ingest_01_splunk_settings_indexes.png` | Setup & Ingestion | Navigation to Splunk Enterprise index management settings. |
+| `ingest_02_create_cybersecurity_lab_index.png` | Setup & Ingestion | Creation of isolated `cybersecurity_lab` event index. |
+| `ingest_03_sourcetype_json_preview.png` | Setup & Ingestion | Verification of `_json` sourcetype parsing and `@timestamp` extraction. |
+| `ingest_04_review_and_submit.png` | Setup & Ingestion | Final onboarding review mapping `normalised_events.jsonl` to `cybersecurity_lab`. |
+| `ingest_05_upload_success.png` | Setup & Ingestion | Confirmation of completed file upload into Splunk. |
+| `ingest_06_raw_json_search.png` | Verification | Initial raw JSON search validating host, source, and sourcetype metadata. |
+| `ingest_07_verification_head_query.png` | Verification | Scoping test (`index=cybersecurity_lab \| head 1`). |
+| `ingest_08_full_index_scan.png` | Verification | Full index scan confirming all 8 synthetic events are searchable. |
+| `01_observer_type_distribution.png` | Module 1 | Breakdown of events by `observer.type` (`endpoint`: 4, `network`: 4). |
+| `02_firewall_connection_table.png` | Module 4 | Tabular inspection of firewall source/destination IPs, ports, and actions. |
+| `03_network_destination_stats.png` | Module 4 | Aggregated connection counts by `destination.ip` and `destination.port`. |
+| `04_auth_failures_timechart.png` | Module 2 & 5 | Hourly `timechart` isolating `authentication_failure` volume. |
+| `05_event_outcomes_comparison.png` | Module 5 | Comparative hourly `timechart` across all 5 `event.outcome` states. |
+| `06_suricata_ids_alerts.png` | Module 3 | Tabular isolation of Suricata `intrusion_detection_alert` records. |
+| `07_event_action_breakdown.png` | Module 1 | Complete distribution of all 8 events ranked by `event.action`. |
+| `08_event_kind_validation.png` | Verification | Schema validation confirming all 8 events carry `event.kind="event"`. |
+| `09_expanded_json_event_schema.png` | Schema Audit | Expanded nested ECS JSON tree and Splunk field extraction sidebar. |
