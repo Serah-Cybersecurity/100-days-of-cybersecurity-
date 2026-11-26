@@ -1,0 +1,10 @@
+timestamp,host,source,event_id,account,logon_id,logon_type,source_ip,process_name,process_guid,parent_process_guid,observation
+2026-11-26T09:00:00Z,NS-WKS-014,Security,4624,analyst01,0x4A1,2,,,,,Successful interactive logon
+2026-11-26T09:02:00Z,NS-WKS-014,Security,4625,analyst01,,2,192.0.2.44,,,,Failed interactive logon
+2026-11-26T09:03:00Z,NS-WKS-014,Security,4624,analyst01,0x4A2,2,,,,,Second successful interactive logon
+2026-11-26T09:04:00Z,NS-WKS-014,Security,4688,analyst01,0x4A2,,,C:\Windows\System32\notepad.exe,,,Process creation recorded
+2026-11-26T09:04:01Z,NS-WKS-014,Sysmon,1,analyst01,0x4A2,,,C:\Windows\System32\notepad.exe,{TRAINING-PROC-001},{TRAINING-PROC-000},Process creation with parent process information
+2026-11-26T09:06:00Z,NS-WKS-014,Sysmon,3,analyst01,0x4A2,,203.0.113.20,C:\Windows\System32\notepad.exe,{TRAINING-PROC-001},,Network connection recorded for the process
+2026-11-26T09:10:00Z,NS-WKS-014,Security,4634,analyst01,0x4A1,,,,,,Logon session ended
+2026-11-26T09:12:00Z,NS-WKS-014,Security,4672,analyst01,0x4A2,,,,,,Special privileges assigned to a new logon
+2026-11-26T09:15:00Z,NS-WKS-014,Sysmon,5,analyst01,0x4A2,,,C:\Windows\System32\notepad.exe,{TRAINING-PROC-001},,Process termination recorded
