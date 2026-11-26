@@ -15,3 +15,8 @@
 - **Separate Sessions:** `0x4A1` (`09:00:00Z`–`09:10:00Z`) and `0x4A2` (`09:03:00Z` onward) are distinct sessions; do not merge them or assume `4625` at `09:02:00Z` caused `4624` at `09:03:00Z`.
 - **Process Instance Tracking:** `{TRAINING-PROC-001}` links Sysmon `1` (`09:04:01Z`), Sysmon `3` (`09:06:00Z`), and Sysmon `5` (`09:15:00Z`) for `notepad.exe` without PID-reuse ambiguity, while `4688` (`09:04:00Z`) has `process_guid: null` in this synthetic dataset.
 - **No Premature Verdict:** Neither compromise nor benign activity is proven from these 9 synthetic records alone; see `reports/day25/evidence-register.csv` (`E-001`–`E-009`) for exact confidence ratings and limitations.
+
+## 7.6 Evidence Register Traceability (Quick Tip)
+- **Line-to-Evidence Mapping:** `E-001` through `E-009` map directly to `line-1` through `line-9` of `data/training/day25_endpoint_events.jsonl`, preserving exact `timestamp_utc`, `host`, and `event_id` values.
+- **Confidence Discipline:** `High` reflects what the record itself clearly establishes; `Moderate` reflects interpretations supported across records where supporting context or fields are incomplete.
+- **Explicit Limitations:** Every entry records what cannot be concluded from the synthetic record alone, preventing leaps from partial telemetry to unverified claims.
